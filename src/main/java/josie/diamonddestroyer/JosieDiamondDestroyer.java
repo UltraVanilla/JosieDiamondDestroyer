@@ -1,5 +1,6 @@
 package josie.diamonddestroyer;
 
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.HashMap;
 import java.util.Map;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -13,7 +14,12 @@ public class JosieDiamondDestroyer extends JavaPlugin {
     public final Map<Material, Material> strictBlockReplacements = new HashMap<>();
 
     public int clearingRadius = 2;
+
     public int alertRadius = 96;
+
+    public final LongOpenHashSet alreadyChecked = new LongOpenHashSet();
+
+    public final LongOpenHashSet alreadyCleaned = new LongOpenHashSet();
 
     @Override
     public void onEnable() {

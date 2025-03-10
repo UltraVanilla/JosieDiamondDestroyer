@@ -1,6 +1,5 @@
 package josie.diamonddestroyer;
 
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.EnumMap;
 import java.util.Map;
 import org.bukkit.Chunk;
@@ -17,10 +16,6 @@ public class TNTPrimeHandler implements Listener {
         this.plugin = pl;
     }
 
-    private final LongOpenHashSet alreadyChecked = new LongOpenHashSet();
-
-    private final LongOpenHashSet alreadyCleaned = new LongOpenHashSet();
-
     @EventHandler
     public void onTNTPrime(TNTPrimeEvent event) {
         if (event.getCause() != TNTPrimeEvent.PrimeCause.REDSTONE) return;
@@ -31,8 +26,8 @@ public class TNTPrimeHandler implements Listener {
         var chunkZ = block.getZ() >> 4;
         var chunkKey = Chunk.getChunkKey(chunkX, chunkZ);
 
-        if (alreadyChecked.contains(chunkKey)) return;
-        alreadyChecked.add(chunkKey);
+        if (plugin.alreadyChecked.contains(chunkKey)) return;
+        plugin.alreadyChecked.add(chunkKey);
 
         if (isTntFromDuping(block)) {
             var location = block.getLocation();
@@ -48,11 +43,13 @@ public class TNTPrimeHandler implements Listener {
 
             Map<Material, Integer> replacementCounts = new EnumMap<>(Material.class);
 
-            for (var checkingZ = chunkZ - radius; checkingZ <= chunkZ + radius; checkingZ++) {
+            for (var checkingZ = chunkZ - plugin.clearingRadius;
+                    checkingZ <= chunkZ + plugin.clearingRadius;
+                    checkingZ++) {
                 for (var checkingX = chunkX - radius; checkingX <= chunkX + radius; checkingX++) {
                     var checkingChunkKey = Chunk.getChunkKey(checkingX, checkingZ);
 
-                    if (alreadyCleaned.contains(checkingChunkKey)) continue;
+                    if (plugin.alreadyCleaned.contains(checkingChunkKey)) continue;
 
                     var chunk = world.getChunkAt(checkingChunkKey);
 
@@ -74,7 +71,7 @@ public class TNTPrimeHandler implements Listener {
                         }
                     }
 
-                    alreadyCleaned.add(checkingChunkKey);
+                    plugin.alreadyCleaned.add(checkingChunkKey);
                 }
             }
 
