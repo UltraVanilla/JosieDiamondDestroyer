@@ -1,0 +1,13 @@
+clearing-radius: 2
+alert-radius: 6
+
+block-replacements:
+  DEEPSLATE_DIAMOND_ORE: DEEPSLATE
+  DIAMOND_ORE: STONE
+  SPAWNER: STONE
+
+strict-block-replacements:
+  ANCIENT_DEBRIS: NETHERRACK
+
+message-start: "<#8f8f8f>TNT duplication occurred nearby. Removing "
+message-end: " to ensure fairness"
