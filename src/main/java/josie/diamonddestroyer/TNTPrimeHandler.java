@@ -6,7 +6,6 @@ import java.util.Map;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.TNTPrimeEvent;
@@ -57,9 +56,9 @@ public class TNTPrimeHandler implements Listener {
 
                     var chunk = world.getChunkAt(checkingChunkKey);
 
-                    for (int y = worldMinHeight; y < worldMaxHeight; y++) {
-                        for (int x = 0; x < 16; x++) {
-                            for (int z = 0; z < 16; z++) {
+                    for (var y = worldMinHeight; y < worldMaxHeight; y++) {
+                        for (var x = 0; x < 16; x++) {
+                            for (var z = 0; z < 16; z++) {
                                 var originalBlock = chunk.getBlock(x, y, z);
                                 var blockType = originalBlock.getType();
 
@@ -83,7 +82,7 @@ public class TNTPrimeHandler implements Listener {
 
             var message = plugin.getConfig().getString("message-start");
             var first = true;
-            for (Map.Entry<Material, Integer> entry : replacementCounts.entrySet()) {
+            for (var entry : replacementCounts.entrySet()) {
                 if (!first) message += ", ";
                 first = false;
                 message += entry.getValue().toString();
@@ -92,7 +91,7 @@ public class TNTPrimeHandler implements Listener {
             }
             message += plugin.getConfig().getString("message-end");
 
-            for (Player entity : world.getNearbyPlayers(location, plugin.alertRadius, 320, plugin.alertRadius)) {
+            for (var entity : world.getNearbyPlayers(location, plugin.alertRadius, 320, plugin.alertRadius)) {
                 entity.sendMessage(plugin.mm.deserialize(message));
             }
         }
@@ -102,7 +101,6 @@ public class TNTPrimeHandler implements Listener {
         for (var yOff = -1; yOff <= 1; yOff++) {
             for (var zOff = -1; zOff <= 1; zOff++) {
                 for (var xOff = -1; xOff <= 1; xOff++) {
-
                     var otherBlock = block.getRelative(xOff, yOff, zOff);
 
                     if (otherBlock.getType() == Material.MOVING_PISTON) {
