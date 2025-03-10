@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class JosieDiamondDestroyer extends JavaPlugin {
@@ -13,18 +14,21 @@ public class JosieDiamondDestroyer extends JavaPlugin {
     public final Map<Material, Material> blockReplacements = new HashMap<>();
     public final Map<Material, Material> strictBlockReplacements = new HashMap<>();
 
-    public int clearingRadius = 2;
-
-    public int alertRadius = 96;
-
     public final LongOpenHashSet alreadyChecked = new LongOpenHashSet();
 
     public final LongOpenHashSet alreadyCleaned = new LongOpenHashSet();
+
+    public NamespacedKey persistentStateKey;
+
+    public int clearingRadius = 2;
+
+    public int alertRadius = 96;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         loadConfig();
+        persistentStateKey = new NamespacedKey(this, "state_v1");
         getServer().getPluginManager().registerEvents(new TNTPrimeHandler(this), this);
     }
 

@@ -2,12 +2,17 @@ package josie.diamonddestroyer;
 
 import java.util.EnumMap;
 import java.util.Map;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Enderman;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.TNTPrimeEvent;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.persistence.PersistentDataType;
 
 public class TNTPrimeHandler implements Listener {
     private final JosieDiamondDestroyer plugin;
@@ -39,14 +44,14 @@ public class TNTPrimeHandler implements Listener {
             var worldMinHeight = world.getMinHeight();
             var worldMaxHeight = world.getMaxHeight();
 
-            var radius = plugin.clearingRadius;
-
             Map<Material, Integer> replacementCounts = new EnumMap<>(Material.class);
 
             for (var checkingZ = chunkZ - plugin.clearingRadius;
                     checkingZ <= chunkZ + plugin.clearingRadius;
                     checkingZ++) {
-                for (var checkingX = chunkX - radius; checkingX <= chunkX + radius; checkingX++) {
+                for (var checkingX = chunkX - plugin.clearingRadius;
+                        checkingX <= chunkX + plugin.clearingRadius;
+                        checkingX++) {
                     var checkingChunkKey = Chunk.getChunkKey(checkingX, checkingZ);
 
                     if (plugin.alreadyCleaned.contains(checkingChunkKey)) continue;
@@ -60,41 +65,42 @@ public class TNTPrimeHandler implements Listener {
                                 var blockType = originalBlock.getType();
 
                                 if (plugin.blockReplacements.containsKey(blockType)) {
-                                    replacementCounts.put(blockType, replacementCounts.getOrDefault(blockType, 0) + 1);
-                                    originalBlock.setType(plugin.blockReplacements.get(blockType));
+                                    replaceBlockAndEmitChange(
+                                            world, originalBlock, replacementCounts, plugin.blockReplacements);
                                 } else if (plugin.strictBlockReplacements.containsKey(blockType)
                                         && isSolidlyEncased(originalBlock)) {
-                                    replacementCounts.put(blockType, replacementCounts.getOrDefault(blockType, 0) + 1);
-                                    originalBlock.setType(plugin.strictBlockReplacements.get(blockType));
+                                    replaceBlockAndEmitChange(
+                                            world, originalBlock, replacementCounts, plugin.strictBlockReplacements);
                                 }
                             }
                         }
                     }
 
                     plugin.alreadyCleaned.add(checkingChunkKey);
+                    chunk.getPersistentDataContainer().set(plugin.persistentStateKey, PersistentDataType.BOOLEAN, true);
                 }
             }
 
-            if (replacementCounts.isEmpty()) return;
+            if (!replacementCounts.isEmpty()) {
+                var message = plugin.getConfig().getString("message-start");
+                var first = true;
+                for (var entry : replacementCounts.entrySet()) {
+                    if (!first) message += ", ";
+                    first = false;
+                    message += entry.getValue().toString();
+                    message += " ";
+                    message += entry.getKey().name();
+                }
+                message += plugin.getConfig().getString("message-end");
 
-            var message = plugin.getConfig().getString("message-start");
-            var first = true;
-            for (var entry : replacementCounts.entrySet()) {
-                if (!first) message += ", ";
-                first = false;
-                message += entry.getValue().toString();
-                message += " ";
-                message += entry.getKey().name();
-            }
-            message += plugin.getConfig().getString("message-end");
-
-            for (var entity : world.getNearbyPlayers(location, plugin.alertRadius, 320, plugin.alertRadius)) {
-                entity.sendMessage(plugin.mm.deserialize(message));
+                for (var entity : world.getNearbyPlayers(location, plugin.alertRadius, 320, plugin.alertRadius)) {
+                    entity.sendMessage(plugin.mm.deserialize(message));
+                }
             }
         }
     }
 
-    private boolean isTntFromDuping(Block block) {
+    private static boolean isTntFromDuping(Block block) {
         for (var yOff = -1; yOff <= 1; yOff++) {
             for (var zOff = -1; zOff <= 1; zOff++) {
                 for (var xOff = -1; xOff <= 1; xOff++) {
@@ -109,7 +115,7 @@ public class TNTPrimeHandler implements Listener {
         return false;
     }
 
-    private boolean isSolidlyEncased(Block block) {
+    private static boolean isSolidlyEncased(Block block) {
         for (var yOff = -1; yOff <= 1; yOff++) {
             for (var zOff = -1; zOff <= 1; zOff++) {
                 for (var xOff = -1; xOff <= 1; xOff++) {
@@ -123,5 +129,23 @@ public class TNTPrimeHandler implements Listener {
         }
 
         return true;
+    }
+
+    private static void replaceBlockAndEmitChange(
+            World world, Block block, Map<Material, Integer> counter, Map<Material, Material> replacementMap) {
+        var blockType = block.getType();
+        var replacement = replacementMap.get(blockType);
+        new EntityChangeBlockEvent(getFirstEnderman(world), block, Bukkit.createBlockData(replacement)).callEvent();
+        counter.put(blockType, counter.getOrDefault(blockType, 0) + 1);
+        block.setType(replacementMap.get(blockType));
+    }
+
+    public static Enderman getFirstEnderman(World world) {
+        for (var entity : world.getEntities()) {
+            if (entity instanceof Enderman) {
+                return (Enderman) entity;
+            }
+        }
+        return null;
     }
 }
