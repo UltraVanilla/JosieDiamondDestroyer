@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "josie.diamonddestroyer"
-version = "1.0.0"
+version = "1.1.0"
 description =
     "Destroys ores when TNT duping is detected"
 

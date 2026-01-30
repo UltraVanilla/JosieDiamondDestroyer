@@ -4,10 +4,11 @@ import java.util.EnumMap;
 import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.entity.Enderman;
+import org.bukkit.entity.Turtle;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.TNTPrimeEvent;
@@ -23,7 +24,8 @@ public class TNTPrimeHandler implements Listener {
 
     @EventHandler
     public void onTNTPrime(TNTPrimeEvent event) {
-        if (event.getCause() != TNTPrimeEvent.PrimeCause.REDSTONE) return;
+        if (event.getCause() != TNTPrimeEvent.PrimeCause.REDSTONE)
+            return;
 
         var block = event.getBlock();
 
@@ -31,7 +33,8 @@ public class TNTPrimeHandler implements Listener {
         var chunkZ = block.getZ() >> 4;
         var chunkKey = Chunk.getChunkKey(chunkX, chunkZ);
 
-        if (plugin.alreadyChecked.contains(chunkKey)) return;
+        if (plugin.alreadyChecked.contains(chunkKey))
+            return;
         plugin.alreadyChecked.add(chunkKey);
 
         if (isTntFromDuping(block)) {
@@ -46,17 +49,21 @@ public class TNTPrimeHandler implements Listener {
 
             Map<Material, Integer> replacementCounts = new EnumMap<>(Material.class);
 
-            for (var checkingZ = chunkZ - plugin.clearingRadius;
-                    checkingZ <= chunkZ + plugin.clearingRadius;
-                    checkingZ++) {
-                for (var checkingX = chunkX - plugin.clearingRadius;
-                        checkingX <= chunkX + plugin.clearingRadius;
-                        checkingX++) {
+            for (var checkingZ = chunkZ - plugin.clearingRadius; checkingZ <= chunkZ
+                    + plugin.clearingRadius; checkingZ++) {
+                for (var checkingX = chunkX - plugin.clearingRadius; checkingX <= chunkX
+                        + plugin.clearingRadius; checkingX++) {
                     var checkingChunkKey = Chunk.getChunkKey(checkingX, checkingZ);
 
-                    if (plugin.alreadyCleaned.contains(checkingChunkKey)) continue;
+                    if (plugin.alreadyCleaned.contains(checkingChunkKey))
+                        continue;
+
+                    plugin.alreadyCleaned.add(checkingChunkKey);
 
                     var chunk = world.getChunkAt(checkingChunkKey);
+                    var pdc = chunk.getPersistentDataContainer();
+                    if (Boolean.TRUE.equals(pdc.get(plugin.persistentStateKey, PersistentDataType.BOOLEAN)))
+                        continue;
 
                     for (var y = worldMinHeight; y < worldMaxHeight; y++) {
                         for (var x = 0; x < 16; x++) {
@@ -76,8 +83,7 @@ public class TNTPrimeHandler implements Listener {
                         }
                     }
 
-                    plugin.alreadyCleaned.add(checkingChunkKey);
-                    chunk.getPersistentDataContainer().set(plugin.persistentStateKey, PersistentDataType.BOOLEAN, true);
+                    pdc.set(plugin.persistentStateKey, PersistentDataType.BOOLEAN, true);
                 }
             }
 
@@ -85,7 +91,8 @@ public class TNTPrimeHandler implements Listener {
                 var message = plugin.getConfig().getString("message-start");
                 var first = true;
                 for (var entry : replacementCounts.entrySet()) {
-                    if (!first) message += ", ";
+                    if (!first)
+                        message += ", ";
                     first = false;
                     message += entry.getValue().toString();
                     message += " ";
@@ -135,15 +142,32 @@ public class TNTPrimeHandler implements Listener {
             World world, Block block, Map<Material, Integer> counter, Map<Material, Material> replacementMap) {
         var blockType = block.getType();
         var replacement = replacementMap.get(blockType);
-        new EntityChangeBlockEvent(getFirstEnderman(world), block, Bukkit.createBlockData(replacement)).callEvent();
+
+        var phantomTurtle = false;
+        Turtle turtle = null;
+        for (var entity : world.getEntities()) {
+            if (entity instanceof Turtle) {
+                turtle = (Turtle) entity;
+            }
+        }
+        if (turtle == null) {
+            turtle = world.spawn(new Location(world, 0, -80, 0), Turtle.class);
+            phantomTurtle = true;
+        }
+
+        new EntityChangeBlockEvent(turtle, block, Bukkit.createBlockData(replacement)).callEvent();
         counter.put(blockType, counter.getOrDefault(blockType, 0) + 1);
         block.setType(replacementMap.get(blockType));
+
+        if (phantomTurtle) {
+            turtle.remove();
+        }
     }
 
-    public static Enderman getFirstEnderman(World world) {
+    public static Turtle getFirstTurtle(World world) {
         for (var entity : world.getEntities()) {
-            if (entity instanceof Enderman) {
-                return (Enderman) entity;
+            if (entity instanceof Turtle) {
+                return (Turtle) entity;
             }
         }
         return null;
